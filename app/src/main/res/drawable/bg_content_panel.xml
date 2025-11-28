@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 降低亮度：使用 10% 不透明度的白色 (原本是 15%) -->
+    <solid android:color="#1AFFFFFF"/> 
+    <corners android:radius="24dp"/>
+</shape>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 调暗后的晴天：从深天蓝到深海蓝 -->
+    <gradient
+        android:angle="45"
+        android:startColor="#2980B9"
+        android:endColor="#6DD5FA"
+        android:type="linear" />
+</shape>
