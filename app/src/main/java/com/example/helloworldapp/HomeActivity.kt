@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -31,6 +32,7 @@ import java.util.Random
  * 2. Feed 流列表展示（模拟数据，支持分页）
  * 3. 下拉刷新与无限加载更多
  * 4. 底部导航栏跳转
+ * 5. 长按删除卡片
  */
 class HomeActivity : AppCompatActivity() {
 
@@ -134,11 +136,16 @@ class HomeActivity : AppCompatActivity() {
         val layoutManager = LinearLayoutManager(this)
         rvFeed.layoutManager = layoutManager
         
-        // 初始化 Adapter，传入数据源及点击回调
-        feedAdapter = FeedAdapter(feedDataList) {
-            // 点击天气卡片跳转到天气详情页
-            startActivity(Intent(this, WeatherActivity::class.java))
-        }
+        // 初始化 Adapter，传入数据源、头部点击回调、以及长按删除回调
+        feedAdapter = FeedAdapter(
+            feedList = feedDataList,
+            onHeaderClick = {
+                startActivity(Intent(this, WeatherActivity::class.java))
+            },
+            onItemLongClick = { position ->
+                showDeleteConfirmDialog(position)
+            }
+        )
         rvFeed.adapter = feedAdapter
 
         // 添加滚动监听，实现“加载更多”及“回到顶部按钮”的显示控制
@@ -168,6 +175,28 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    /**
+     * 显示删除确认对话框
+     */
+    private fun showDeleteConfirmDialog(adapterPosition: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("删除提示")
+            .setMessage("确定要删除这条内容吗？")
+            .setPositiveButton("删除") { _, _ ->
+                // Adapter位置需要减去 Header 数量 (1) 才是数据源索引
+                val dataIndex = adapterPosition - 1
+                if (dataIndex >= 0 && dataIndex < feedDataList.size) {
+                    feedDataList.removeAt(dataIndex)
+                    feedAdapter.notifyItemRemoved(adapterPosition)
+                    // 刷新后续 Item 的位置索引，防止连续删除时位置错乱
+                    feedAdapter.notifyItemRangeChanged(adapterPosition, feedDataList.size - dataIndex)
+                    Toast.makeText(this, "删除成功", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun setupBottomNavigation() {
@@ -301,7 +330,8 @@ data class FeedItem(
  */
 class FeedAdapter(
     private val feedList: List<FeedItem>,
-    private val onHeaderClick: () -> Unit
+    private val onHeaderClick: () -> Unit,
+    private val onItemLongClick: (Int) -> Unit // 新增：长按回调
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -335,7 +365,7 @@ class FeedAdapter(
             (holder as HeaderViewHolder).bind(weatherData, onHeaderClick)
         } else {
             // Feed 数据索引需要 -1 (减去 Header 占位)
-            (holder as ItemViewHolder).bind(feedList[position - 1])
+            (holder as ItemViewHolder).bind(feedList[position - 1], onItemLongClick)
         }
     }
 
@@ -412,7 +442,7 @@ class FeedAdapter(
         private val btnComment: LinearLayout = view.findViewById(R.id.ll_comment)
         private val btnShare: LinearLayout = view.findViewById(R.id.ll_share)
 
-        fun bind(item: FeedItem) {
+        fun bind(item: FeedItem, onItemLongClick: (Int) -> Unit) {
             tvAuthor.text = item.author
             tvTime.text = item.time
             tvContent.text = item.content
@@ -435,6 +465,12 @@ class FeedAdapter(
             
             btnShare.setOnClickListener {
                 Toast.makeText(itemView.context, "点击分享", Toast.LENGTH_SHORT).show()
+            }
+
+            // 长按删除监听
+            itemView.setOnLongClickListener {
+                onItemLongClick(adapterPosition)
+                true // 消费长按事件
             }
         }
     }
