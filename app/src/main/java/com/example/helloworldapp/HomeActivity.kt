@@ -107,6 +107,15 @@ class HomeActivity : AppCompatActivity() {
             }
             Toast.makeText(this, "已回到顶部", Toast.LENGTH_SHORT).show()
         }
+
+        // 顶部 Toolbar 按钮点击事件
+        findViewById<ImageView>(R.id.search_button).setOnClickListener {
+            Toast.makeText(this, "点击了搜索", Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<ImageView>(R.id.switch_button).setOnClickListener {
+            Toast.makeText(this, "已切换双列模式", Toast.LENGTH_SHORT).show()
+        }
     }
 
     /**
