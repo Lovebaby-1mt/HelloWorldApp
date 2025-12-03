@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -25,7 +26,12 @@ import java.util.Random
 
 /**
  * 首页 Activity
- * 集成了插件式 Feed 卡片系统
+ * 包含功能：
+ * 1. 顶部天气卡片展示（作为 RecyclerView 的 Header）
+ * 2. Feed 流列表展示（模拟数据，支持分页）
+ * 3. 下拉刷新与无限加载更多
+ * 4. 底部导航栏跳转
+ * 5. 长按删除卡片
  */
 class HomeActivity : AppCompatActivity() {
 
@@ -132,10 +138,16 @@ class HomeActivity : AppCompatActivity() {
         val layoutManager = LinearLayoutManager(this)
         rvFeed.layoutManager = layoutManager
         
-        // FeedAdapter 的构造参数 onHeaderClick 仅用于 Header (天气卡片)
-        feedAdapter = FeedAdapter(feedDataList) {
-            startActivity(Intent(this, WeatherActivity::class.java))
-        }
+        // 初始化 Adapter，传入数据源、头部点击回调、以及长按删除回调
+        feedAdapter = FeedAdapter(
+            feedList = feedDataList,
+            onHeaderClick = {
+                startActivity(Intent(this, WeatherActivity::class.java))
+            },
+            onItemLongClick = { position ->
+                showDeleteConfirmDialog(position)
+            }
+        )
         rvFeed.adapter = feedAdapter
 
         rvFeed.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -161,6 +173,28 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    /**
+     * 显示删除确认对话框
+     */
+    private fun showDeleteConfirmDialog(adapterPosition: Int) {
+        AlertDialog.Builder(this)
+            .setTitle("删除提示")
+            .setMessage("确定要删除这条内容吗？")
+            .setPositiveButton("删除") { _, _ ->
+                // Adapter位置需要减去 Header 数量 (1) 才是数据源索引
+                val dataIndex = adapterPosition - 1
+                if (dataIndex >= 0 && dataIndex < feedDataList.size) {
+                    feedDataList.removeAt(dataIndex)
+                    feedAdapter.notifyItemRemoved(adapterPosition)
+                    // 刷新后续 Item 的位置索引，防止连续删除时位置错乱
+                    feedAdapter.notifyItemRangeChanged(adapterPosition, feedDataList.size - dataIndex)
+                    Toast.makeText(this, "删除成功", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun setupBottomNavigation() {
@@ -330,8 +364,9 @@ class HomeActivity : AppCompatActivity() {
  * 基于插件式卡片系统，动态处理不同类型的卡片
  */
 class FeedAdapter(
-    private val feedList: List<Feedable>,
-    private val onHeaderClick: () -> Unit
+    private val feedList: List<FeedItem>,
+    private val onHeaderClick: () -> Unit,
+    private val onItemLongClick: (Int) -> Unit // 新增：长按回调
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
