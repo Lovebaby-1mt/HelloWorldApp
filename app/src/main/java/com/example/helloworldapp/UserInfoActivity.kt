@@ -36,6 +36,8 @@ class UserInfoActivity : AppCompatActivity() {
         val tvSignature = findViewById<TextView>(R.id.tv_signature)
         val itemPersonalInfo = findViewById<View>(R.id.item_personal_info)
         val itemFavorites = findViewById<View>(R.id.item_favorites)
+        val itemHistory = findViewById<View>(R.id.item_history)
+        val itemSettings = findViewById<View>(R.id.item_settings)
 
         // 使用 SharedPreferences 存储用户配置
         val sp = getSharedPreferences("user_info", Context.MODE_PRIVATE)
@@ -53,6 +55,14 @@ class UserInfoActivity : AppCompatActivity() {
         // 点击“我的收藏”
         itemFavorites.setOnClickListener {
             Toast.makeText(this, "点击了我的收藏", Toast.LENGTH_SHORT).show()
+        }
+        // 点击“浏览历史”
+        itemHistory.setOnClickListener {
+            Toast.makeText(this, "点击了浏览历史", Toast.LENGTH_SHORT).show()
+        }
+        // 点击“设置”
+        itemSettings.setOnClickListener {
+            Toast.makeText(this, "点击了设置", Toast.LENGTH_SHORT).show()
         }
     }
 
