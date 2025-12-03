@@ -23,13 +23,15 @@
         app:layout_constraintTop_toTopOf="parent"/>
 
     <!-- 用户信息卡片 -->
+    <!-- 修改 app:cardBackgroundColor 为带透明度的白色 (#E6FFFFFF = 90% 不透明) -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="80dp"
+        android:layout_marginTop="12dp"
         app:cardCornerRadius="12dp"
         app:cardElevation="4dp"
+        app:cardBackgroundColor="#F6EFEFEF"
         app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
@@ -111,8 +113,8 @@
 
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="24dp"/>
 
-            <!-- 菜单项：浏览历史 -->
             <LinearLayout
+                android:id="@+id/item_history"
                 style="@style/ProfileMenuItem">
                 <ImageView style="@style/ProfileMenuIcon" android:src="@android:drawable/ic_menu_recent_history"/>
                 <TextView style="@style/ProfileMenuText" android:text="浏览历史"/>
@@ -121,8 +123,8 @@
 
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="24dp"/>
 
-            <!-- 菜单项：设置 -->
             <LinearLayout
+                android:id="@+id/item_settings"
                 style="@style/ProfileMenuItem">
                 <ImageView style="@style/ProfileMenuIcon" android:src="@android:drawable/ic_menu_preferences"/>
                 <TextView style="@style/ProfileMenuText" android:text="设置"/>
