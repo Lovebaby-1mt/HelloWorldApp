@@ -10,9 +10,9 @@
     <!-- 左边的横线 (分割线) -->
     <View
         android:layout_width="0dp"
-        android:layout_height="1dp"
+        android:layout_height="2dp"
         android:layout_weight="1"
-        android:background="#EEEEEE" />
+        android:background="#DDDDDD" />
 
     <!-- 中间的三个点 -->
     <TextView
@@ -21,15 +21,15 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:text="·   ·   ·"
-        android:textColor="#CCCCCC"
-        android:textSize="20sp"
+        android:textColor="#AAAAAA"
+        android:textSize="30sp"
         android:textStyle="bold" />
 
     <!-- 右边的横线 (分割线) -->
     <View
         android:layout_width="0dp"
-        android:layout_height="1dp"
+        android:layout_height="2dp"
         android:layout_weight="1"
-        android:background="#EEEEEE" />
+        android:background="#DDDDDD" />
 
 </LinearLayout>
