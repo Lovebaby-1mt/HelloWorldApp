@@ -471,9 +471,11 @@ class FeedAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
+        // 0 留给 Header，其他正整数留给 styleId 的 hash
         const val TYPE_HEADER = 0
         const val TYPE_FOOTER = 999
     }
+    var isFooterVisible = false
 
     var isGridMode = false // 模式开关
     var isFooterVisible = false
