@@ -30,9 +30,8 @@
             android:name=".LoginActivity"
             android:exported="false" />
 
-        <!-- 新主页 HomeActivity -->
         <activity android:name=".HomeActivity" />
-
+        <activity android:name=".ExposureDataActivity" />
         <activity android:name=".UserInfoActivity" />
         <activity android:name=".WeatherActivity" />
     </application>

@@ -58,8 +58,10 @@ class HomeActivity : AppCompatActivity() {
     // 分页控制
     private var currentPage = 1
     private var isLoading = false
-    private val pageSize = 10
+    private val pageSize = 20
     private var isLastPage = false
+
+    private var exposureManager: FeedExposureManager? = null
 
     // 模拟资源
     private val contentPool = listOf(
@@ -243,8 +245,38 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         })
+        initExposureManager()
     }
 
+    private fun initExposureManager() {
+        // 防止重复初始化
+        exposureManager?.detach()
+
+        exposureManager = FeedExposureManager(rvFeed, feedDataList, object : OnExposureListener {
+            override fun onStateChanged(
+                position: Int,
+                styleId: String,
+                oldState: ExposureState,
+                newState: ExposureState,
+                timestamp: Long // 接收时间戳
+            ) {
+                // 1. 将枚举状态转换为可读的中文
+                val eventName = when (newState) {
+                    ExposureState.VISIBLE -> "开始露出"
+                    ExposureState.OVER_50 -> "露出超50%"
+                    ExposureState.FULL_VISIBLE -> "完整展示"
+                    ExposureState.INVISIBLE -> "消失不可见"
+                }
+
+                // 2. 只有当状态发生“有效升级”或者是“消失”时才记录，避免刷屏
+                // 例如：从 Visible -> Over_50 是升级，记录。
+                // 从 Over_50 -> Visible 是降级，通常不记录(看业务需求)，这里演示全部记录
+
+                // 3. 将数据存入单例
+                ExposureDataHolder.addLog(position, styleId, eventName, timestamp)
+            }
+        })
+    }
     /**
      * 切换单列/双列布局模式
      */
@@ -294,12 +326,18 @@ class HomeActivity : AppCompatActivity() {
             Toast.makeText(this, "已经在首页", Toast.LENGTH_SHORT).show()
         }
         findViewById<LinearLayout>(R.id.tab_feed).setOnClickListener {
-            Toast.makeText(this, "发现功能开发中...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "即将跳转到监视台", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, ExposureDataActivity::class.java))
         }
         findViewById<LinearLayout>(R.id.tab_mine).setOnClickListener {
             startActivity(Intent(this, UserInfoActivity::class.java))
             overridePendingTransition(0, 0)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        exposureManager?.detach()
     }
 
     /**
@@ -335,7 +373,6 @@ class HomeActivity : AppCompatActivity() {
                 repeat(pageSize) {
                     val cardType = random.nextInt(100)
 
-                    // 【核心修改】不再随机，而是根据全局开关决定样式
                     // 如果是 Grid 模式，layoutType=1, style 后缀是 _grid
                     // 如果是 List 模式，layoutType=2, style 后缀是 _list
                     val currentLayoutType = if (isGridMode) 1 else 2
@@ -436,7 +473,6 @@ class HomeActivity : AppCompatActivity() {
 
 
     private fun fetchWeatherData() {
-        // 请使用你自己的 Key
         val url = "https://restapi.amap.com/v3/weather/weatherInfo?city=330114&extensions=base&key=1acb9f2e4e024e47a6b0f776eb5c689f"
         val request = Request.Builder().url(url).build()
 
