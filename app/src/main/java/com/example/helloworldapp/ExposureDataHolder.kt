@@ -25,34 +25,41 @@ object ExposureDataHolder {
     private val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
 
     fun addLog(position: Int, styleId: String, eventName: String, timestamp: Long) {
-        // 1. 生成日志字符串
+        // 1. 归一化 StyleId
+        val baseStyleId = styleId.replace("_list", "").replace("_grid", "")
+
+        // 2. 生成日志
         val timeStr = dateFormat.format(Date(timestamp))
         val logEntry = "[$timeStr] \nPos:$position [$styleId] -> $eventName"
-        logs.add(0, logEntry)
-        if (logs.size > 2000) logs.removeAt(logs.size - 1)
+        logs.add(logEntry)
+        if (logs.size > 2000) {
+            logs.removeAt(0)
+        }
 
-        // 2. 统计逻辑
-        val stat = statsMap.getOrPut(styleId) { ExposureStat() }
+        // 3. 统计逻辑
+        val stat = statsMap.getOrPut(baseStyleId) { ExposureStat() }
 
         when (eventName) {
             "开始露出" -> {
-                // 【核心修改】只有当这个位置之前没有记录时，才算一次新的曝光开始
-                // 防止滑动抖动导致起始时间被不断重置
+                // 【核心修复】只有当 activeSessions 中没有这个 position 的记录时，才视为一次新的开始。
+                // 如果已经存在，说明它正在曝光中，忽略这次重复的“开始”信号。
                 if (!activeSessions.containsKey(position)) {
                     activeSessions[position] = timestamp
                     stat.count++
                 }
             }
             "消失不可见" -> {
-                // 结算时长
+                // 结算时长：只有能取到开始时间，才进行结算
                 val startTime = activeSessions.remove(position)
                 if (startTime != null) {
                     val duration = timestamp - startTime
-                    if (duration > 0) {
+                    // 【兜底修复】过滤异常数据，例如负数或不合理的超长时长（比如 > 1小时）
+                    if (duration in 1..3600000) {
                         stat.totalDuration += duration
                     }
                 }
             }
+            // 其他中间状态（如50%露出、完整露出）不处理计时逻辑，防止干扰
         }
     }
 

@@ -80,14 +80,19 @@ class ExposureDataActivity : AppCompatActivity() {
                 val color = colors[index % colors.size]
 
                 // 简化卡片名称显示
-                val shortName = styleId.replace("_list", "").replace("_grid", "")
+                val displayName = when(styleId) {
+                    "image_card" -> "图文卡片"
+                    "video_card" -> "视频卡片"
+                    "article_card" -> "文章卡片"
+                    "ad_card" -> "广告卡片"
+                    else -> styleId
+                }
 
-                val line = "● $shortName\n   时长: ${stat.totalDuration}ms | 曝光: ${stat.count}次\n"
+                val line = "● $displayName\n   时长: ${String.format("%.1f", stat.totalDuration/1000f)}s(${stat.totalDuration}ms) | 曝光: ${stat.count}次\n\n"
                 val start = spannableBuilder.length
 
                 spannableBuilder.append(line)
 
-                // 核心修改：给这一行的第一个字符 "●" 设置颜色
                 spannableBuilder.setSpan(
                     ForegroundColorSpan(color),
                     start,
@@ -99,6 +104,10 @@ class ExposureDataActivity : AppCompatActivity() {
             }
             // 必须赋值 spannableBuilder，而不是之前的 sbStats
             tvStats.text = spannableBuilder
+        }
+        val scrollView = findViewById<androidx.core.widget.NestedScrollView>(R.id.scroll_view_logs)
+        scrollView.post {
+            scrollView.fullScroll(android.view.View.FOCUS_DOWN)
         }
     }
 
