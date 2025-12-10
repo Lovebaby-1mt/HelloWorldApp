@@ -30,7 +30,7 @@ interface OnExposureListener {
         styleId: String,
         oldState: ExposureState,
         newState: ExposureState,
-        timestamp: Long // 新增参数
+        timestamp: Long
     )
 }
 
@@ -46,6 +46,9 @@ class FeedExposureManager(
 
     // 记录每个位置当前的曝光状态
     private val stateMap = mutableMapOf<Int, ExposureState>()
+
+    private val visibleRect = Rect()
+    private val currentVisiblePositions = mutableSetOf<Int>()
 
     init {
         // 初始化时监听
@@ -63,38 +66,94 @@ class FeedExposureManager(
     }
 
     /**
+     * 生命周期处理：页面不可见（暂停）
+     * 强制结束所有当前的曝光
+     */
+    fun onPause() {
+        val iterator = stateMap.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val pos = entry.key
+            val state = entry.value
+
+            if (state != ExposureState.INVISIBLE) {
+                // 获取 styleId
+                val dataIndex = pos - 1
+                val itemData = dataList.getOrNull(dataIndex)
+                var styleId = itemData?.styleId ?: "unknown"
+                
+                // 修正 styleId (Grid/List)
+                val layoutManager = recyclerView.layoutManager
+                val isGridMode = layoutManager is androidx.recyclerview.widget.StaggeredGridLayoutManager
+                if (isGridMode) {
+                    if (styleId.endsWith("_list")) styleId = styleId.replace("_list", "_grid")
+                } else {
+                    if (styleId.endsWith("_grid")) styleId = styleId.replace("_grid", "_list")
+                }
+
+                // 分发结束曝光事件
+                dispatchEvents(pos, styleId, state, ExposureState.INVISIBLE)
+                
+                // 更新状态为不可见，以便下次 onResume 能重新触发开始曝光
+                entry.setValue(ExposureState.INVISIBLE)
+            }
+        }
+    }
+
+    /**
+     * 生命周期处理：页面可见（恢复）
+     * 重新检测当前可见性
+     */
+    fun onResume() {
+        recyclerView.post {
+            checkVisibility()
+        }
+    }
+
+    /**
      * 核心方法：检测所有可见 Item 的状态
      */
     private fun checkVisibility() {
         val layoutManager = recyclerView.layoutManager ?: return
-        val visibleRect = Rect()
 
-        // 获取 RecyclerView 在屏幕上的可见区域
         recyclerView.getGlobalVisibleRect(visibleRect)
 
-        // 1. 遍历当前 RecyclerView 中所有 attach 的子 View
+        // 判断当前是否是网格模式 (根据 LayoutManager 类型判断最准确)
+        val isGridMode = layoutManager is androidx.recyclerview.widget.StaggeredGridLayoutManager
+
         val childCount = recyclerView.childCount
 
-        // 记录本轮检测中可见的位置，用于后续判断哪些 Item 消失了
-        val currentVisiblePositions = mutableSetOf<Int>()
+        currentVisiblePositions.clear()
 
         for (i in 0 until childCount) {
             val child = recyclerView.getChildAt(i) ?: continue
             val position = recyclerView.getChildAdapterPosition(child)
 
-            // 排除无效位置、Header(0) 和 Footer
             if (position <= 0 || position > dataList.size) continue
 
-            // 获取数据源索引 (减去Header)
             val dataIndex = position - 1
             val itemData = dataList.getOrNull(dataIndex) ?: continue
 
+            // --- 核心修复：在这里修正 styleId ---
+            var styleId = itemData.styleId
+
+            if (isGridMode) {
+                // 如果是网格模式，强制视作 _grid
+                if (styleId.endsWith("_list")) {
+                    styleId = styleId.replace("_list", "_grid")
+                }
+            } else {
+                // 如果是列表模式，强制视作 _list
+                if (styleId.endsWith("_grid")) {
+                    styleId = styleId.replace("_grid", "_list")
+                }
+            }
+            // ----------------------------------
+
             currentVisiblePositions.add(position)
 
-            // 计算可见比例
             val percentage = calculateVisiblePercentage(child)
 
-            // 确定新状态
             val newState = when {
                 percentage >= 1.0f -> ExposureState.FULL_VISIBLE
                 percentage >= 0.5f -> ExposureState.OVER_50
@@ -102,12 +161,10 @@ class FeedExposureManager(
                 else -> ExposureState.INVISIBLE
             }
 
-            // 获取旧状态 (默认为 INVISIBLE)
             val oldState = stateMap.getOrDefault(position, ExposureState.INVISIBLE)
 
-            // 如果状态发生跃迁
             if (newState != oldState) {
-                dispatchEvents(position, itemData.styleId, oldState, newState)
+                dispatchEvents(position, styleId, oldState, newState)
                 stateMap[position] = newState
             }
         }
@@ -120,15 +177,23 @@ class FeedExposureManager(
             val state = entry.value
 
             if (!currentVisiblePositions.contains(pos) && state != ExposureState.INVISIBLE) {
-                // 触发消失事件
                 val dataIndex = pos - 1
-                val styleId = dataList.getOrNull(dataIndex)?.styleId ?: "unknown"
+                val itemData = dataList.getOrNull(dataIndex)
+
+                // 同样逻辑：消失的时候也要修正 styleId
+                var styleId = itemData?.styleId ?: "unknown"
+                if (isGridMode) {
+                    if (styleId.endsWith("_list")) styleId = styleId.replace("_list", "_grid")
+                } else {
+                    if (styleId.endsWith("_grid")) styleId = styleId.replace("_grid", "_list")
+                }
 
                 dispatchEvents(pos, styleId, state, ExposureState.INVISIBLE)
-                iterator.remove() // 移除记录
+                iterator.remove()
             }
         }
     }
+
 
     private fun dispatchEvents(position: Int, styleId: String, oldState: ExposureState, newState: ExposureState) {
         // 获取当前时间戳
@@ -158,5 +223,6 @@ class FeedExposureManager(
     fun detach() {
         recyclerView.removeOnScrollListener(this)
         stateMap.clear()
+        currentVisiblePositions.clear()
     }
 }
